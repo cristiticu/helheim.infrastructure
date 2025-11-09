@@ -6,13 +6,8 @@ VALHEIM_USER="valheim"
 VALHEIM_DATA_DIR="/home/${VALHEIM_USER}/.config/unity3d/IronGate/Valheim"
 VALHEIM_INSTALL_DIR="/home/${VALHEIM_USER}/valheim-server"
 
-# Placeholders (MUST be replaced by Lambda)
-PLACEHOLDER_NAME="SERVER_NAME_PLACEHOLDER"
-PLACEHOLDER_PASSWORD="PASSWORD_PLACEHOLDER"
-PLACEHOLDER_WORLD="WORLD_PLACEHOLDER"
-PLACEHOLDER_S3_BUCKET="S3_BUCKET_PLACEHOLDER"
-
-S3_BUCKET_NAME="#S3"
+# Placeholder variables to be replaced by User Data script
+S3_BUCKET_PATH="#S3"
 SERVER_NAME="#SERVER_NAME" 
 SERVER_PASSWORD="#PASSWORD"
 WORLD_NAME="#WORLD" 
@@ -55,11 +50,11 @@ cleanup_on_exit() {
 trap cleanup_on_exit SIGINT
 
 ./valheim_server.x86_64 \
-    -name \"${PLACEHOLDER_NAME}\" \
+    -name \"${SERVER_NAME}\" \
     -port 2456 \
     -nographics \
-    -world \"${PLACEHOLDER_WORLD}\" \
-    -password \"${PLACEHOLDER_PASSWORD}\" \
+    -world \"${WORLD_NAME}\" \
+    -password \"${SERVER_PASSWORD}\" \
     -public 1 &
 
 VALHEIM_PID=\$!
@@ -88,8 +83,8 @@ echo "Initiating Valheim world sync to S3..."
 
 # The User Data script will use 'sed' to replace THIS_BUCKET_PLACEHOLDER with the real S3 bucket name.
 aws s3 sync \
-    "${VALHEIM_DATA_DIR}/worlds_local" \
-    "s3://${PLACEHOLDER_S3_BUCKET}/worlds_local/"
+    "${WORLD_LOCAL_PATH}" \
+    "s3://${S3_BUCKET_PATH}"
 
 echo "S3 sync complete."
 EOF
@@ -130,30 +125,17 @@ EOF
 # -------------------------------------------------------------
 # 4. Initial Sync of World Files from S3
 # -------------------------------------------------------------
-echo "Syncing Valheim worlds from s3://${S3_BUCKET_NAME}/worlds_local/ to ${WORLD_LOCAL_PATH}"
+echo "Syncing Valheim worlds from s3://${S3_BUCKET_PATH} to ${WORLD_LOCAL_PATH}"
 
 mkdir -p "${WORLD_LOCAL_PATH}"
 chown -R ${VALHEIM_USER}:${VALHEIM_USER} "${VALHEIM_DATA_DIR}"
-sudo -u ${VALHEIM_USER} aws s3 sync "s3://${S3_BUCKET_NAME}/worlds_local/" "${WORLD_LOCAL_PATH}"
+sudo -u ${VALHEIM_USER} aws s3 sync "s3://${S3_BUCKET_PATH}" "${WORLD_LOCAL_PATH}"
 
-
-
-# -------------------------------------------------------------
-# 5. Inject Configuration into Scripts by Replacing Placeholders
-# -------------------------------------------------------------
-echo "Injecting S3 Bucket Name into the ExecStop wrapper script..."
-
-sed -i "s|${PLACEHOLDER_S3_BUCKET}|${S3_BUCKET_NAME}|g" /usr/bin/sync_to_s3_wrapper
-
-echo "Injecting server configuration into start_valheim.sh..."
-sed -i "s|${PLACEHOLDER_NAME}|${SERVER_NAME}|g" ${VALHEIM_INSTALL_DIR}/start_valheim.sh
-sed -i "s|${PLACEHOLDER_PASSWORD}|${SERVER_PASSWORD}|g" ${VALHEIM_INSTALL_DIR}/start_valheim.sh
-sed -i "s|${PLACEHOLDER_WORLD}|${WORLD_NAME}|g" ${VALHEIM_INSTALL_DIR}/start_valheim.sh
 
 
 
 # -------------------------------------------------------------
-# 6. Create 30-Minute Periodic Sync Script
+# 5. Create 30-Minute Periodic Sync Script
 # -------------------------------------------------------------
 echo "Creating 30-minute periodic sync script..."
 
@@ -179,7 +161,7 @@ EOF
 sudo chmod +x ${PERIODIC_SYNC_SCRIPT}
 
 # -------------------------------------------------------------
-# 7. Set up Crontab for Periodic Sync
+# 6. Set up Crontab for Periodic Sync
 # -------------------------------------------------------------
 echo "Setting up crontab for user ${VALHEIM_USER} (sync every 30 minutes)..."
 
@@ -187,7 +169,7 @@ echo "Setting up crontab for user ${VALHEIM_USER} (sync every 30 minutes)..."
 
 
 # -------------------------------------------------------------
-# 8. Start Valheim systemd Service
+# 7. Start Valheim systemd Service
 # -------------------------------------------------------------
 echo "Starting Valheim systemd service..."
 
