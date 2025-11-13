@@ -43,19 +43,17 @@ export class HelheimBackendStack extends Stack {
             removalPolicy: RemovalPolicy.RETAIN,
             globalSecondaryIndexes: [
                 {
-                    indexName: 'gsi.realm-lookup',
+                    indexName: 'gsi.user-realms-lookup-2',
                     partitionKey: {
                         name: 'user_guid',
                         type: aws_dynamodb.AttributeType.STRING,
                     },
                     sortKey: {
-                        name: 'realm_guid',
+                        name: 'guid',
                         type: aws_dynamodb.AttributeType.STRING,
                     },
 
-                    projectionType: aws_dynamodb.ProjectionType.INCLUDE,
-
-                    nonKeyAttributes: ['role', 'joined_at'],
+                    projectionType: aws_dynamodb.ProjectionType.ALL,
                 },
             ],
         });
