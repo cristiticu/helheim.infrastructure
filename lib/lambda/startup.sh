@@ -14,6 +14,10 @@ WORLD_NAME="#WORLD"
 INSTANCE_ID="#INSTANCE" 
 AWS_REGION="#REGION"
 
+VALHEIM_PRESET_FLAG="#PRESET_FLAG"
+VALHEIM_MODIFIER_FLAGS="#MODIFIER_FLAGS"
+VALHEIM_KEY_FLAGS="#KEY_FLAGS"
+
 WORLD_LOCAL_PATH="${VALHEIM_DATA_DIR}/worlds_local"
 PERIODIC_SYNC_SCRIPT="/usr/local/bin/valheim_periodic_sync.sh"
 
@@ -55,7 +59,7 @@ trap cleanup_on_exit SIGINT
     -nographics \
     -world \"${WORLD_NAME}\" \
     -password \"${SERVER_PASSWORD}\" \
-    -public 1 &
+    -public 1 ${VALHEIM_PRESET_FLAG} ${VALHEIM_MODIFIER_FLAGS} ${VALHEIM_KEY_FLAGS} &
 
 VALHEIM_PID=\$!
 
