@@ -7,7 +7,8 @@ VALHEIM_DATA_DIR="/home/${VALHEIM_USER}/.config/unity3d/IronGate/Valheim"
 VALHEIM_INSTALL_DIR="/home/${VALHEIM_USER}/valheim-server"
 
 # Placeholder variables to be replaced by User Data script
-S3_BUCKET_PATH="#S3"
+WORLD_S3_BUCKET_PATH="#WORLD_S3"
+CONFIG_FILES_S3_BUCKET_PATH="#LISTS_S3"
 SERVER_NAME="#SERVER_NAME" 
 SERVER_PASSWORD="#PASSWORD"
 WORLD_NAME="#WORLD" 
@@ -18,6 +19,7 @@ VALHEIM_PRESET_FLAG="#PRESET_FLAG"
 VALHEIM_MODIFIER_FLAGS="#MODIFIER_FLAGS"
 VALHEIM_KEY_FLAGS="#KEY_FLAGS"
 
+CONFIG_FILES_LOCAL_PATH="${VALHEIM_DATA_DIR}"
 WORLD_LOCAL_PATH="${VALHEIM_DATA_DIR}/worlds_local"
 PERIODIC_SYNC_SCRIPT="/usr/local/bin/valheim_periodic_sync.sh"
 
@@ -88,7 +90,7 @@ echo "Initiating Valheim world sync to S3..."
 # The User Data script will use 'sed' to replace THIS_BUCKET_PLACEHOLDER with the real S3 bucket name.
 aws s3 sync \
     "${WORLD_LOCAL_PATH}" \
-    "s3://${S3_BUCKET_PATH}"
+    "s3://${WORLD_S3_BUCKET_PATH}"
 
 echo "S3 sync complete."
 EOF
@@ -127,13 +129,14 @@ EOF
 
 
 # -------------------------------------------------------------
-# 4. Initial Sync of World Files from S3
+# 4. Initial Sync of World Files and admin lists from S3
 # -------------------------------------------------------------
-echo "Syncing Valheim worlds from s3://${S3_BUCKET_PATH} to ${WORLD_LOCAL_PATH}"
+echo "Syncing Valheim worlds from s3://${WORLD_S3_BUCKET_PATH} to ${WORLD_LOCAL_PATH}"
 
 mkdir -p "${WORLD_LOCAL_PATH}"
 chown -R ${VALHEIM_USER}:${VALHEIM_USER} "${VALHEIM_DATA_DIR}"
-sudo -u ${VALHEIM_USER} aws s3 sync "s3://${S3_BUCKET_PATH}" "${WORLD_LOCAL_PATH}"
+sudo -u ${VALHEIM_USER} aws s3 sync "s3://${WORLD_S3_BUCKET_PATH}" "${WORLD_LOCAL_PATH}"
+sudo -u ${VALHEIM_USER} aws s3 sync "s3://${CONFIG_FILES_S3_BUCKET_PATH}" "${CONFIG_FILES_LOCAL_PATH}"
 
 
 
