@@ -21,8 +21,14 @@ VALHEIM_MODIFIER_FLAGS="#MODIFIER_FLAGS"
 VALHEIM_KEY_FLAGS="#KEY_FLAGS"
 
 CONFIG_FILES_LOCAL_PATH="${VALHEIM_DATA_DIR}"
+
 WORLD_LOCAL_PATH="${VALHEIM_DATA_DIR}/worlds_local"
-MOD_PLUGINS_LOCAL_PATH="${VALHEIM_INSTALL_DIR}/BepInEx/plugins"
+
+MOD_FILES_LOCAL_PATH="${VALHEIM_INSTALL_DIR}/BepInEx"
+MOD_PLUGINS_LOCAL_PATH="${MOD_FILES_LOCAL_PATH}/plugins"
+MOD_CONFIG_LOCAL_PATH="${MOD_FILES_LOCAL_PATH}/config"
+MOD_PATCHERS_LOCAL_PATH="${MOD_FILES_LOCAL_PATH}/patchers"
+
 PERIODIC_SYNC_SCRIPT="/usr/local/bin/valheim_periodic_sync.sh"
 
 # -------------------------------------------------------------
@@ -91,32 +97,31 @@ EOF
 
 
 # -------------------------------------------------------------
-# 2. Synd modpack files from S3 (if any)
+# 2. Sync modpack files from S3 (Safely merging changes)
 # -------------------------------------------------------------
-echo "Syncing modpack files from S3 (if any)..."
+echo "Syncing modpack files from S3 (safely merging)..."
 
 if [[ -n "${MODPACK_S3_BUCKET_PATH}" ]]; then
     
-    echo "--- S3 Modpack Sync Initiated ---"
-    echo "Source URI: ${MODPACK_S3_BUCKET_PATH}"
+    echo "--- S3 Modpack Sync Initiated (Using s3 sync) ---"
     
-    # Ensure the plugins directory exists and is owned by the Valheim user
-    sudo -u "${VALHEIM_USER}" mkdir -p "${MOD_PLUGINS_LOCAL_PATH}"
-    
-    # Download all DLL/CFG files as the Valheim user
-    sudo -u "${VALHEIM_USER}" /usr/bin/aws s3 cp "${MODPACK_S3_BUCKET_PATH}" "${MOD_PLUGINS_LOCAL_PATH}" \
-        --recursive \
-        --exclude '*' \
-        --include '*.dll' \
-        --include '*.cfg'
 
-    chown -R ${VALHEIM_USER}:${VALHEIM_USER} "${VALHEIM_INSTALL_DIR}"
+
+    # Ensure the BepInEx root directory exists
+    sudo -u "${VALHEIM_USER}" mkdir -p "${MOD_FILES_LOCAL_PATH}"
+    
+    sudo -u "${VALHEIM_USER}" /usr/bin/aws s3 sync \
+        "${S3_MODPACK_CONTENT_PATH}" \
+        "${MOD_FILES_LOCAL_PATH}"
 
     if [ $? -eq 0 ]; then
-        echo "S3 Modpack Sync completed successfully."
+        echo "S3 Modpack Sync completed successfully. Existing local files preserved."
     else
         echo "WARNING: S3 Modpack Sync failed."
     fi
+
+    # Ensure final ownership is correct
+    chown -R ${VALHEIM_USER}:${VALHEIM_USER} "${VALHEIM_INSTALL_DIR}"
 
 else
     echo "MODPACK_S3_BUCKET_PATH is empty. No modpack sync required."
