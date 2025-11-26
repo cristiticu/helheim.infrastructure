@@ -107,9 +107,7 @@ if [[ -n "${MODPACK_S3_BUCKET_PATH}" ]]; then
     
 
     
-    sudo -u "${VALHEIM_USER}" /usr/bin/aws s3 sync \
-        "${MODPACK_S3_BUCKET_PATH}" \
-        "${MOD_FILES_LOCAL_PATH}"
+    sudo -u "${VALHEIM_USER}" /usr/bin/aws s3 sync "${MODPACK_S3_BUCKET_PATH}" "${MOD_FILES_LOCAL_PATH}" --recursive
 
     if [ $? -eq 0 ]; then
         echo "S3 Modpack Sync completed successfully. Existing local files preserved."
