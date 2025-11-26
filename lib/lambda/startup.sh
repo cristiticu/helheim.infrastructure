@@ -47,7 +47,7 @@ export DOORSTOP_ENABLED=1
 export DOORSTOP_TARGET_ASSEMBLY=./BepInEx/core/BepInEx.Preloader.dll
 
 export LD_LIBRARY_PATH="./doorstop_libs:\$LD_LIBRARY_PATH"
-export LD_PRELOAD="libdoorstop_x64.so:\$LD_PRELOAD"
+export LD_PRELOAD="./doorstop_libs/libdoorstop_x64.so:\$LD_PRELOAD"
 ####
 
 # Required for Valheim server to find its libraries
@@ -107,7 +107,7 @@ if [[ -n "${MODPACK_S3_BUCKET_PATH}" ]]; then
     
 
     
-    sudo -u "${VALHEIM_USER}" /usr/bin/aws s3 sync "${MODPACK_S3_BUCKET_PATH}" "${MOD_FILES_LOCAL_PATH}" --recursive
+    sudo -u ${VALHEIM_USER} aws s3 sync "s3://${MODPACK_S3_BUCKET_PATH}" "${MOD_FILES_LOCAL_PATH}" --recursive
 
     if [ $? -eq 0 ]; then
         echo "S3 Modpack Sync completed successfully. Existing local files preserved."
