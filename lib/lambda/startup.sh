@@ -106,12 +106,9 @@ if [[ -n "${MODPACK_S3_BUCKET_PATH}" ]]; then
     echo "--- S3 Modpack Sync Initiated (Using s3 sync) ---"
     
 
-
-    # Ensure the BepInEx root directory exists
-    sudo -u "${VALHEIM_USER}" mkdir -p "${MOD_FILES_LOCAL_PATH}"
     
     sudo -u "${VALHEIM_USER}" /usr/bin/aws s3 sync \
-        "${S3_MODPACK_CONTENT_PATH}" \
+        "${MODPACK_S3_BUCKET_PATH}" \
         "${MOD_FILES_LOCAL_PATH}"
 
     if [ $? -eq 0 ]; then
