@@ -6,8 +6,9 @@ VALHEIM_USER="valheim"
 VALHEIM_DATA_DIR="/home/${VALHEIM_USER}/.config/unity3d/IronGate/Valheim"
 VALHEIM_INSTALL_DIR="/home/${VALHEIM_USER}/valheim-server"
 
-# Placeholder variables to be replaced by User Data script
+# Placeholder variables to be replaced by startup lambda
 WORLD_S3_BUCKET_PATH="#WORLD_S3"
+MODPACK_S3_BUCKET_PATH="#MODPACK_S3"
 CONFIG_FILES_S3_BUCKET_PATH="#LISTS_S3"
 SERVER_NAME="#SERVER_NAME" 
 SERVER_PASSWORD="#PASSWORD"
@@ -21,6 +22,7 @@ VALHEIM_KEY_FLAGS="#KEY_FLAGS"
 
 CONFIG_FILES_LOCAL_PATH="${VALHEIM_DATA_DIR}"
 WORLD_LOCAL_PATH="${VALHEIM_DATA_DIR}/worlds_local"
+MOD_PLUGINS_LOCAL_PATH="${VALHEIM_INSTALL_DIR}/BepInEx/plugins"
 PERIODIC_SYNC_SCRIPT="/usr/local/bin/valheim_periodic_sync.sh"
 
 # -------------------------------------------------------------
@@ -31,6 +33,16 @@ echo "Creating Valheim server startup script with placeholders..."
 sudo -u "${VALHEIM_USER}" bash -c "
     cat <<EOF > ${VALHEIM_INSTALL_DIR}/start_valheim.sh
 #!/bin/bash
+
+# BepInEx-specific settings
+# NOTE: Do not edit unless you know what you are doing!
+####
+export DOORSTOP_ENABLED=1
+export DOORSTOP_TARGET_ASSEMBLY=./BepInEx/core/BepInEx.Preloader.dll
+
+export LD_LIBRARY_PATH="./doorstop_libs:\$LD_LIBRARY_PATH"
+export LD_PRELOAD="libdoorstop_x64.so:\$LD_PRELOAD"
+####
 
 # Required for Valheim server to find its libraries
 export LD_LIBRARY_PATH=./linux64:\$LD_LIBRARY_PATH
@@ -79,7 +91,40 @@ EOF
 
 
 # -------------------------------------------------------------
-# 2. Create S3 Sync Wrapper Script with Placeholder
+# 2. Synd modpack files from S3 (if any)
+# -------------------------------------------------------------
+echo "Syncing modpack files from S3 (if any)..."
+
+if [[ -n "${MODPACK_S3_BUCKET_PATH}" ]]; then
+    
+    echo "--- S3 Modpack Sync Initiated ---"
+    echo "Source URI: ${MODPACK_S3_BUCKET_PATH}"
+    
+    # Ensure the plugins directory exists and is owned by the Valheim user
+    sudo -u "${VALHEIM_USER}" mkdir -p "${MOD_PLUGINS_LOCAL_PATH}"
+    
+    # Download all DLL/CFG files as the Valheim user
+    sudo -u "${VALHEIM_USER}" /usr/bin/aws s3 cp "${MODPACK_S3_BUCKET_PATH}" "${MOD_PLUGINS_LOCAL_PATH}" \
+        --recursive \
+        --exclude '*' \
+        --include '*.dll' \
+        --include '*.cfg'
+
+    chown -R ${VALHEIM_USER}:${VALHEIM_USER} "${VALHEIM_INSTALL_DIR}"
+
+    if [ $? -eq 0 ]; then
+        echo "S3 Modpack Sync completed successfully."
+    else
+        echo "WARNING: S3 Modpack Sync failed."
+    fi
+
+else
+    echo "MODPACK_S3_BUCKET_PATH is empty. No modpack sync required."
+fi
+
+
+# -------------------------------------------------------------
+# 3. Create S3 Sync Wrapper Script with Placeholder
 # -------------------------------------------------------------
 echo "Creating S3 sync wrapper script with placeholder..."
 
@@ -99,7 +144,7 @@ sudo chmod +x /usr/bin/sync_to_s3_wrapper
 
 
 # -------------------------------------------------------------
-# 3. Create systemd Service for Valheim Server
+# 4. Create systemd Service for Valheim Server
 # -------------------------------------------------------------
 echo "Creating systemd service for Valheim..."
 
@@ -129,7 +174,7 @@ EOF
 
 
 # -------------------------------------------------------------
-# 4. Initial Sync of World Files and admin lists from S3
+# 5. Initial Sync of World Files and admin lists from S3
 # -------------------------------------------------------------
 echo "Syncing Valheim worlds from s3://${WORLD_S3_BUCKET_PATH} to ${WORLD_LOCAL_PATH}"
 
@@ -142,7 +187,7 @@ sudo -u ${VALHEIM_USER} aws s3 sync "s3://${CONFIG_FILES_S3_BUCKET_PATH}" "${CON
 
 
 # -------------------------------------------------------------
-# 5. Create 30-Minute Periodic Sync Script
+# 6. Create 30-Minute Periodic Sync Script
 # -------------------------------------------------------------
 echo "Creating 30-minute periodic sync script..."
 
@@ -168,7 +213,7 @@ EOF
 sudo chmod +x ${PERIODIC_SYNC_SCRIPT}
 
 # -------------------------------------------------------------
-# 6. Set up Crontab for Periodic Sync
+# 7. Set up Crontab for Periodic Sync
 # -------------------------------------------------------------
 echo "Setting up crontab for user ${VALHEIM_USER} (sync every 30 minutes)..."
 
@@ -176,7 +221,7 @@ echo "Setting up crontab for user ${VALHEIM_USER} (sync every 30 minutes)..."
 
 
 # -------------------------------------------------------------
-# 7. Start Valheim systemd Service
+# 8. Start Valheim systemd Service
 # -------------------------------------------------------------
 echo "Starting Valheim systemd service..."
 
