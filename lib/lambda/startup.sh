@@ -101,26 +101,43 @@ EOF
 # -------------------------------------------------------------
 echo "Syncing modpack files from S3 (safely merging)..."
 
-if [[ -n "${MODPACK_S3_BUCKET_PATH}" ]]; then
     
-    echo "--- S3 Modpack Sync Initiated (Using s3 sync) ---"
-    
+echo "--- S3 Modpack Sync Initiated (Using s3 sync) ---"
+MODPACK_DEBUG_LOG="/home/${VALHEIM_USER}/modpack_sync_debug.log"
 
-    
-    sudo -u ${VALHEIM_USER} aws s3 sync "s3://${MODPACK_S3_BUCKET_PATH}" "${MOD_FILES_LOCAL_PATH}" --recursive
+sudo -u ${VALHEIM_USER} bash -c "
+    echo '--- Starting Modpack Sync Debug Log: \$(date) ---' > ${MODPACK_DEBUG_LOG}
+    mkdir -p '${MOD_FILES_LOCAL_PATH}'
+    chown -R ${VALHEIM_USER}:${VALHEIM_USER} '${MOD_FILES_LOCAL_PATH}'
+    echo 'Local path verified: ${MOD_FILES_LOCAL_PATH}' >> ${MODPACK_DEBUG_LOG}
 
-    if [ $? -eq 0 ]; then
-        echo "S3 Modpack Sync completed successfully. Existing local files preserved."
+    echo 'Testing S3 access with aws s3 ls...' >> ${MODPACK_DEBUG_LOG}
+    
+    # CRITICAL DEBUG STEP: Test S3 access. Output is written to the debug log.
+    aws s3 ls 's3://${MODPACK_S3_BUCKET_PATH}/' 2>&1 | tee -a ${MODPACK_DEBUG_LOG}
+    LS_STATUS=\$?
+    
+    if [ \$LS_STATUS -ne 0 ]; then
+        echo 'FATAL ERROR: S3 access test failed (exit code \$LS_STATUS).' >> ${MODPACK_DEBUG_LOG}
     else
-        echo "WARNING: S3 Modpack Sync failed."
+        echo 'S3 access test successful. Initiating full sync...' >> ${MODPACK_DEBUG_LOG}
+        
+        # Full Sync. Output (or errors) is written to the debug log.
+        aws s3 sync 's3://${MODPACK_S3_BUCKET_PATH}' '${MOD_FILES_LOCAL_PATH}' 2>&1 | tee -a ${MODPACK_DEBUG_LOG}
+        SYNC_STATUS=\$?
+
+        if [ \$SYNC_STATUS -eq 0 ]; then
+            echo 'S3 Modpack Sync completed successfully.' >> ${MODPACK_DEBUG_LOG}
+        else
+            echo 'WARNING: S3 Modpack Sync failed (Final Sync) with exit code \$SYNC_STATUS.' >> ${MODPACK_DEBUG_LOG}
+        fi
     fi
+    echo '--- Modpack Sync Debug Log End: \$(date) ---' >> ${MODPACK_DEBUG_LOG}
+"
 
-    # Ensure final ownership is correct
-    chown -R ${VALHEIM_USER}:${VALHEIM_USER} "${VALHEIM_INSTALL_DIR}"
+# Ensure final ownership is correct
+chown -R ${VALHEIM_USER}:${VALHEIM_USER} "${VALHEIM_INSTALL_DIR}"
 
-else
-    echo "MODPACK_S3_BUCKET_PATH is empty. No modpack sync required."
-fi
 
 
 # -------------------------------------------------------------
