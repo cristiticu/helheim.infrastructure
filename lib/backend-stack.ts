@@ -116,6 +116,7 @@ export class HelheimBackendStack extends Stack {
 
             environment: {
                 CORS_ORIGINS: '["https://helheim.cristit.icu", "http://localhost:3000"]',
+                ENVIRONMENT: 'production',
             },
         });
 
