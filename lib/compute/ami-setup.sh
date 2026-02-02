@@ -3,6 +3,8 @@
 # Valheim Server AMI Build Script for Ubuntu 24.04 LTS (AMD64)
 # This script sets up the base system and server files.
 
+# Version: 2 February 2026 Default Public Version
+
 # Configuration Variables
 VALHEIM_USER="valheim"
 VALHEIM_HOME="/home/${VALHEIM_USER}"

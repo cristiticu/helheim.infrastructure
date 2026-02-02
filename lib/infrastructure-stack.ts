@@ -11,7 +11,7 @@ export class ValheimServerStack extends Stack {
     constructor(scope: Construct, id: string, props?: StackProps) {
         super(scope, id, props);
 
-        const helheimAmi = 'ami-0153d669f3cc1be97';
+        const helheimAmi = 'ami-00ef5e183be0865d4';
         const keyPairName = 'Valhalla-Keys';
         const instanceType = new InstanceType('t3.medium');
 

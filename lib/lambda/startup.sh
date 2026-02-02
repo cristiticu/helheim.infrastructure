@@ -1,12 +1,15 @@
 #!/bin/bash
 
 # Valheim Server User Data Script for Ubuntu 24.04 LTS (AMD64)
+# Version: 2 February 2026 Default Public Version
 # This script runs on instance launch to configure and start the Valheim server.
+
 VALHEIM_USER="valheim"
 VALHEIM_DATA_DIR="/home/${VALHEIM_USER}/.config/unity3d/IronGate/Valheim"
 VALHEIM_INSTALL_DIR="/home/${VALHEIM_USER}/valheim-server"
 
 # Placeholder variables to be replaced by startup lambda
+USE_MODS="#USE_MODS"
 WORLD_S3_BUCKET_PATH="#WORLD_S3"
 MODPACK_S3_BUCKET_PATH="#MODPACK_S3"
 CONFIG_FILES_S3_BUCKET_PATH="#LISTS_S3"
@@ -43,11 +46,16 @@ sudo -u "${VALHEIM_USER}" bash -c "
 # BepInEx-specific settings
 # NOTE: Do not edit unless you know what you are doing!
 ####
-export DOORSTOP_ENABLED=1
-export DOORSTOP_TARGET_ASSEMBLY=./BepInEx/core/BepInEx.Preloader.dll
+if [ \"${USE_MODS}\" = \"true\" ]; then
+    echo \"MODS ENABLED: Loading BepInEx environment...\"
+    export DOORSTOP_ENABLED=1
+    export DOORSTOP_TARGET_ASSEMBLY=./BepInEx/core/BepInEx.Preloader.dll
 
-export LD_LIBRARY_PATH="./doorstop_libs:\$LD_LIBRARY_PATH"
-export LD_PRELOAD="./doorstop_libs/libdoorstop_x64.so:\$LD_PRELOAD"
+    export LD_LIBRARY_PATH="./doorstop_libs:\$LD_LIBRARY_PATH"
+    export LD_PRELOAD="./doorstop_libs/libdoorstop_x64.so:\$LD_PRELOAD"
+else
+    echo \"MODS DISABLED: Launching Vanilla...\"
+fi
 ####
 
 # Required for Valheim server to find its libraries
@@ -99,13 +107,14 @@ EOF
 # -------------------------------------------------------------
 # 2. Sync modpack files from S3 (Safely merging changes)
 # -------------------------------------------------------------
-echo "Syncing modpack files from S3 (safely merging)..."
+if [ "${USE_MODS}" = "true" ]; then
+    echo "Syncing modpack files from S3 (safely merging)..."
 
     
-echo "--- S3 Modpack Sync Initiated (Using s3 sync) ---"
-MODPACK_DEBUG_LOG="/home/${VALHEIM_USER}/modpack_sync_debug.log"
+    echo "--- S3 Modpack Sync Initiated (Using s3 sync) ---"
+    MODPACK_DEBUG_LOG="/home/${VALHEIM_USER}/modpack_sync_debug.log"
 
-sudo -u ${VALHEIM_USER} bash -c "
+    sudo -u ${VALHEIM_USER} bash -c "
     echo '--- Starting Modpack Sync Debug Log: \$(date) ---' > ${MODPACK_DEBUG_LOG}
     mkdir -p '${MOD_FILES_LOCAL_PATH}'
     chown -R ${VALHEIM_USER}:${VALHEIM_USER} '${MOD_FILES_LOCAL_PATH}'
@@ -133,7 +142,10 @@ sudo -u ${VALHEIM_USER} bash -c "
         fi
     fi
     echo '--- Modpack Sync Debug Log End: \$(date) ---' >> ${MODPACK_DEBUG_LOG}
-"
+    "
+else
+    echo "Skipping Modpack Sync (Vanilla Mode)."
+fi
 
 # Ensure final ownership is correct
 chown -R ${VALHEIM_USER}:${VALHEIM_USER} "${VALHEIM_INSTALL_DIR}"
