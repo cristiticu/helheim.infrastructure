@@ -7,41 +7,37 @@ import { Construct } from 'constructs';
 import * as fs from 'fs';
 import * as path from 'path';
 
-export class ValheimServerStack extends Stack {
+export class VintageStoryServerStack extends Stack {
     constructor(scope: Construct, id: string, props?: StackProps) {
         super(scope, id, props);
 
-        const helheimAmi = 'ami-00ef5e183be0865d4';
-        const keyPairName = 'Valhalla-Keys';
+        const vintageStoryAmi = 'ami-05d4f517116112ec0';
+        const keyPairName = 'Vintage Story Keys';
         const instanceType = new InstanceType('t3.medium');
 
-        const vpc = new Vpc(this, 'ValheimVPC', {
-            vpcName: 'helheim.vpc',
+        const vpc = new Vpc(this, 'VintageStoryVPC', {
+            vpcName: 'vintage-story.vpc',
             maxAzs: 1,
             natGateways: 0,
         });
 
-        const securityGroup = new SecurityGroup(this, 'Valheim-SG-Infra', {
+        const securityGroup = new SecurityGroup(this, 'Vintage-Story-SG-Infra', {
             vpc,
-            description: 'Allows Valheim traffic and SSH access',
+            description: 'Allows Vintage Story traffic and SSH access',
             allowAllOutbound: true,
         });
 
-        const valheimPorts = [2456, 2457, 2458];
+        const vintageStoryPorts = [42420];
         securityGroup.addIngressRule(cdk.aws_ec2.Peer.anyIpv4(), Port.tcp(22), 'Allow SSH');
-        valheimPorts.forEach((port) => {
-            securityGroup.addIngressRule(cdk.aws_ec2.Peer.anyIpv4(), Port.udp(port), `Valheim UDP Port ${port}`);
-            securityGroup.addIngressRule(cdk.aws_ec2.Peer.anyIpv4(), Port.tcp(port), `Valheim TCP Port ${port}`);
+        vintageStoryPorts.forEach((port) => {
+            securityGroup.addIngressRule(cdk.aws_ec2.Peer.anyIpv4(), Port.udp(port), `Vintage Story UDP Port ${port}`);
+            securityGroup.addIngressRule(cdk.aws_ec2.Peer.anyIpv4(), Port.tcp(port), `Vintage Story TCP Port ${port}`);
         });
 
-        const storageBucket = new Bucket(this, 'ValheimWorldBucket', {
-            bucketName: 'helheim.storage',
-            removalPolicy: cdk.RemovalPolicy.RETAIN,
-            autoDeleteObjects: false,
-        });
+        const storageBucket = Bucket.fromBucketName(this, 'VSStorageBucket', 'helheim.storage');
 
-        const instanceRole = new Role(this, 'ValheimInstanceRole', {
-            roleName: 'helheim.instance.role',
+        const instanceRole = new Role(this, 'VintageStoryInstanceRole', {
+            roleName: 'helheim.vintage_story.instance.role',
             assumedBy: new ServicePrincipal('ec2.amazonaws.com'),
         });
 
@@ -55,22 +51,22 @@ export class ValheimServerStack extends Stack {
             })
         );
 
-        let userDataScript = fs.readFileSync(path.join(__dirname, '/lambda/startup.sh'), 'utf8');
+        let userDataScript = fs.readFileSync(path.join(__dirname, '../lambda/vintage_story/startup.sh'), 'utf8');
 
         const placeholderUserData = UserData.custom(userDataScript);
 
-        const instanceProfile = new CfnInstanceProfile(this, 'ValheimInstanceProfile', {
+        const instanceProfile = new CfnInstanceProfile(this, 'VintageStoryInstanceProfile', {
             // You can optionally set a specific name, or let CloudFormation generate one.
-            instanceProfileName: 'helheim.instance.profile',
+            instanceProfileName: 'helheim.vintage_story.instance.profile',
             roles: [
                 instanceRole.roleName, // Associate the Role by its name
             ],
         });
 
-        const launchTemplate = new CfnLaunchTemplate(this, 'ValheimEphemeralTemplate', {
-            launchTemplateName: 'helheim.instance.template',
+        const launchTemplate = new CfnLaunchTemplate(this, 'VintageStoryEphemeralTemplate', {
+            launchTemplateName: 'helheim.vintage_story.instance.template',
             launchTemplateData: {
-                imageId: helheimAmi,
+                imageId: vintageStoryAmi,
                 instanceType: instanceType.toString(),
                 keyName: keyPairName,
                 instanceInitiatedShutdownBehavior: 'terminate',
@@ -95,8 +91,8 @@ export class ValheimServerStack extends Stack {
             },
         });
 
-        const startServerLambdaRole = new Role(this, 'StartServerLambdaRole', {
-            roleName: 'helheim.instance.lambda.role',
+        const startServerLambdaRole = new Role(this, 'StartVintageStoryServerLambdaRole', {
+            roleName: 'helheim.vintage_story.instance.lambda.role',
             assumedBy: new ServicePrincipal('lambda.amazonaws.com'),
             managedPolicies: [cdk.aws_iam.ManagedPolicy.fromAwsManagedPolicyName('service-role/AWSLambdaBasicExecutionRole')],
         });
@@ -124,10 +120,10 @@ export class ValheimServerStack extends Stack {
             })
         );
 
-        const lambdaDir = path.join(__dirname, 'lambda');
+        const lambdaDir = path.join(__dirname, '../lambda/vintage_story');
 
-        const startServerLambda = new aws_lambda.Function(this, 'StartValheimServerLambda', {
-            functionName: 'helheim_instance_lambda',
+        const startServerLambda = new aws_lambda.Function(this, 'StartVintageStoryServerLambda', {
+            functionName: 'helheim_vintage_story_instance_lambda',
             runtime: aws_lambda.Runtime.NODEJS_20_X,
             handler: 'index.handler', // Points to the index.js file's handler function
             code: aws_lambda.Code.fromAsset(lambdaDir), // CDK zips the content of this folder
@@ -139,15 +135,15 @@ export class ValheimServerStack extends Stack {
             role: startServerLambdaRole,
         });
 
-        new CfnOutput(this, 'LaunchTemplateId', {
+        new CfnOutput(this, 'VintageStoryLaunchTemplateId', {
             value: launchTemplate.ref,
             description: 'The ID of the Launch Template used to start Valheim Spot instances.',
         });
-        new CfnOutput(this, 'WorldS3BucketName', {
+        new CfnOutput(this, 'VintageStoryWorldS3BucketName', {
             value: storageBucket.bucketName,
-            description: 'S3 Bucket for Valheim World Syncing.',
+            description: 'S3 Bucket for VintageStory World Syncing.',
         });
-        new CfnOutput(this, 'SecurityGroupId', {
+        new CfnOutput(this, 'VintageStorySecurityGroupId', {
             value: securityGroup.securityGroupId,
             description: 'The Security Group ID to use when launching instances.',
         });

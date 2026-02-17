@@ -97,7 +97,10 @@ export class HelheimBackendStack extends Stack {
         helheimLambdaRole.addToPolicy(
             new aws_iam.PolicyStatement({
                 actions: ['lambda:InvokeFunction'],
-                resources: [`arn:aws:lambda:${this.region}:${this.account}:function:helheim_instance_lambda`], // Use the specific ARN of the target Lambda
+                resources: [
+                    `arn:aws:lambda:${this.region}:${this.account}:function:helheim_instance_lambda`,
+                    `arn:aws:lambda:${this.region}:${this.account}:function:helheim_vintage_story_instance_lambda`,
+                ], // Use the specific ARN of the target Lambda
                 effect: aws_iam.Effect.ALLOW,
             })
         );
