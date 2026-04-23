@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Vintage Story Server User Data Script for Ubuntu 24.04 LTS (AMD64)
-# Version: 17 February 2026 1.21.6
+# Version: 23 April 2026 1.22.0
 # This script runs on instance launch to configure and start the vintage story server.
 
 VINTAGE_USER="vintagestory"

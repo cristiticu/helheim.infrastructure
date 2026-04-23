@@ -3,7 +3,7 @@
 # Vintage Story Server AMI Build Script for Ubuntu 24.04 LTS (AMD64)
 # This script sets up the base system and server files.
 
-# Version: 17 February 2026 1.21.6
+# Version: 23 April 2026 1.22.0
 
 # Configuration Variables
 VINTAGE_USER="vintagestory"
@@ -39,9 +39,9 @@ sudo -u "${VINTAGE_USER}" bash -c "
     echo 'Downloading Vintage Story server files...'
     cd ${VINTAGE_HOME}
     mkdir -p ${VINTAGE_INSTALL_DIR}
-    curl -O https://cdn.vintagestory.at/gamefiles/stable/vs_server_linux-x64_1.21.6.tar.gz
-    tar -C ${VINTAGE_INSTALL_DIR} -xzf vs_server_linux-x64_1.21.6.tar.gz
-    rm vs_server_linux-x64_1.21.6.tar.gz
+    curl -O https://cdn.vintagestory.at/gamefiles/stable/vs_server_linux-x64_1.22.0.tar.gz
+    tar -C ${VINTAGE_INSTALL_DIR} -xzf vs_server_linux-x64_1.22.0.tar.gz
+    rm vs_server_linux-x64_1.22.0.tar.gz
     chmod +x ${VINTAGE_INSTALL_DIR}/server.sh
 "
 
