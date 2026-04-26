@@ -15,7 +15,7 @@ VINTAGE_SERVER_DATA_DIR="${VINTAGE_HOME}/data"
 echo "Updating system and installing prerequisites..."
 sudo apt update -y
 sudo apt install -y \
-    dotnet-runtime-8.0 \
+    dotnet-runtime-10.0 \
     procps \
     screen \
     curl \
