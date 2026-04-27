@@ -11,7 +11,7 @@ export class VintageStoryServerStack extends Stack {
     constructor(scope: Construct, id: string, props?: StackProps) {
         super(scope, id, props);
 
-        const vintageStoryAmi = 'ami-0dbef440818a5562c';
+        const vintageStoryAmi = 'ami-00fea3b3e07c6b025';
         const keyPairName = 'Vintage Story Keys';
         const instanceType = new InstanceType('t3.medium');
 
